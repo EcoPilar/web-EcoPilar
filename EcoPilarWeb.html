@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoPilar - Plataforma Reciclaje Urbano</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        },
+                        teal: {
+                            600: '#0d9488',
+                            700: '#0f766e',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+    <!-- Carga de API de Google Maps -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDB2XgA-gVOt6H0_MNlDXopxd7wwrU1fDA&callback=initMap" async defer></script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="bg-emerald-800 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            
+            <!-- NUEVO LOGO Y NOMBRE -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="goToHome()">
+                <!-- Aquí cargamos tu imagen de logo -->
+                <img src="logo-ecopilar.png" alt="Logo EcoPilar" class="h-10 w-auto object-contain">
+                
+                <div>
+                    <span class="font-extrabold text-xl tracking-wide block leading-none">EcoPilar</span>
+                    <span class="text-[10px] text-emerald-200 tracking-wider block">Juntos por una ciudad más limpia</span>
+                </div>
+            </div>
+
+            <!-- Header Right Menu (El resto de tus botones de usuario y menú se mantienen igual) -->
+            <div id="navUserArea" class="hidden flex items-center space-x-3 sm:space-x-4">
+                <button onclick="switchView('edu')" class="text-sm bg-emerald-700/80 hover:bg-emerald-600 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 text-emerald-100">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span class="hidden md:inline">Educación</span>
+                </button>
+                <div class="h-6 w-px bg-emerald-700"></div>
+                <div class="text-right">
+                    <div id="navUserName" class="text-xs sm:text-sm font-semibold text-white">Usuario</div>
+                    <span id="navUserBadge" class="inline-block text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase bg-emerald-900 text-emerald-200 border border-emerald-700">Rol</span>
+                </div>
+                <button onclick="logout()" class="text-xs bg-red-500/20 hover:bg-red-600 text-red-200 hover:text-white p-2 sm:px-3 sm:py-1.5 rounded-lg transition border border-red-500/30 flex items-center gap-1" title="Cerrar Sesión">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span class="hidden sm:inline">Salir</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full"></div>
+
+    <!-- MAIN CONTAINER FOR VIEWS -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- VIEW 0: HOME / BIENVENIDA CON FOTO EDITABLE DE LA CIUDAD -->
+        <section id="viewHome" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                <div class="relative h-72 sm:h-96 w-full bg-slate-800">
+                    <!-- Imagen de la Ciudad (Editable mediante input) -->
+                    <img id="cityBannerImg" src="https://statics.elnacional.com.py/2020/10/f3b45ae7d7079e82e2114d1d55a16eb6.jpg" alt="Ciudad de Pilar" class="w-full h-full object-cover opacity-85">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent flex flex-col justify-end p-6 sm:p-10 text-white">
+                        <span class="bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full w-max mb-2">Plataforma Ambiental</span>
+                        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Construyamos un Pilar más limpio y sustentable</h1>
+                        <p class="text-slate-200 text-sm sm:text-base mt-2 max-w-2xl">Gestiona la recolección de tus reciclables, gana puntos ecológicos y ayuda a transformar nuestra ciudad.</p>
+                    </div>
+                    <!-- Botón flotante para cambiar la foto de la ciudad -->
+                    <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-2 rounded-xl text-white text-xs flex items-center gap-2 border border-white/25 cursor-pointer hover:bg-black/80 transition">
+                        <label for="uploadCityPhoto" class="cursor-pointer flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-camera"></i> Cambiar Foto de la Ciudad
+                        </label>
+                        <input type="file" id="uploadCityPhoto" accept="image/*" class="hidden" onchange="previewCityPhoto(event)">
+                    </div>
+                </div>
+                <div class="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">¿Ya tienes una cuenta en EcoPilar?</h3>
+                        <p class="text-sm text-slate-500">Inicia sesión o regístrate para comenzar a reciclar y solicitar retiros.</p>
+                    </div>
+                    <button onclick="goToAuth()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition flex items-center gap-2">
+                        <span>Acceder al Sistema</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 1: AUTHENTICATION (LOGIN / REGISTER) -->
+        <section id="viewAuth" class="max-w-md mx-auto my-4 hidden">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200/80">
+                <!-- Auth Tabs Header -->
+                <div class="flex border-b border-slate-200 bg-slate-50">
+                    <button id="tabLoginBtn" onclick="toggleAuthTab('login')" class="flex-1 py-4 text-center font-bold text-emerald-700 border-b-2 border-emerald-600 bg-white transition text-sm">
+                        <i class="fa-solid fa-lock mr-2"></i>Iniciar Sesión
+                    </button>
+                    <button id="tabRegisterBtn" onclick="toggleAuthTab('register')" class="flex-1 py-4 text-center font-bold text-slate-500 hover:text-emerald-600 transition text-sm">
+                        <i class="fa-solid fa-user-plus mr-2"></i>Registrarse
+                    </button>
+                </div>
+
+                <div class="p-6 sm:p-8">
+                    <!-- LOGIN FORM -->
+                    <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Correo Electrónico</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </span>
+                                <input type="email" id="loginEmail" required placeholder="ejemplo@ecopilar.py" class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Contraseña</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="fa-solid fa-key"></i>
+                                </span>
+                                <input type="password" id="loginPass" required placeholder="••••••••" class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition text-sm">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-md transition transform active:scale-95 flex items-center justify-center gap-2 mt-6 text-sm">
+                            <span>Ingresar al Sistema</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+
+                        <!-- QUICK DEMO LOGINS -->
+                        <div class="mt-8 pt-6 border-t border-slate-200">
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 text-center">Acceso Rápido de Prueba (Demo)</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="fillQuickLogin('vecino@ecopilar.py', '123456')" class="py-2 px-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-300 rounded text-center transition font-medium">
+                                    <i class="fa-solid fa-user block text-base mb-1 text-emerald-600"></i>Vecino
+                                </button>
+                                <button type="button" onclick="fillQuickLogin('recolector@ecopilar.py', '123456')" class="py-2 px-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-300 rounded text-center transition font-medium">
+                                    <i class="fa-solid fa-truck block text-base mb-1 text-teal-600"></i>Recolector
+                                </button>
+                                <button type="button" onclick="fillQuickLogin('admin@ecopilar.py', '123456')" class="py-2 px-1 text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-300 rounded text-center transition font-medium">
+                                    <i class="fa-solid fa-user-shield block text-base mb-1 text-purple-600"></i>Admin
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- REGISTER FORM -->
+                    <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Nombre Completo</label>
+                            <input type="text" id="regName" required placeholder="Ej: Maria Benitez" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Correo Electrónico</label>
+                            <input type="email" id="regEmail" required placeholder="correo@ejemplo.com" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Contraseña</label>
+                                <input type="password" id="regPass" required placeholder="••••••••" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Barrio de Pilar</label>
+                                <select id="regNeighborhood" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                                    <option value="12 de Octubre">12 de Octubre</option>
+                                    <option value="15 de Mayo">15 de Mayo</option>
+                                    <option value="8 de Diciembre">8 de Diciembre</option>
+                                    <option value="Colinas de Pilar">Colinas de Pilar</option>
+                                    <option value="Crucecita">Crucecita</option>
+                                    <option value="Del Este">Del Este</option>
+                                    <option value="General Díaz">General Díaz</option>
+                                    <option value="Guaraní">Guaraní</option>
+                                    <option value="Juan Pablo II">Juan Pablo II</option>
+                                    <option value="La Esperanza">La Esperanza</option>
+                                    <option value="Las Residentas">Las Residentas</option>
+                                    <option value="Loma Clavel">Loma Clavel</option>
+                                    <option value="Mbokajaty">Mbokajaty (Mbocayaty)</option>
+                                    <option value="Medina">Medina</option>
+                                    <option value="Obrero">Obrero</option>
+                                    <option value="Puerto Nuevo">Puerto Nuevo</option>
+                                    <option value="San Alfonso">San Alfonso</option>
+                                    <option value="San Antonio">San Antonio</option>
+                                    <option value="San Francisco">San Francisco</option>
+                                    <option value="San José">San José</option>
+                                    <option value="San Lorenzo">San Lorenzo</option>
+                                    <option value="San Miguel">San Miguel</option>
+                                    <option value="San Rafael">San Rafael</option>
+                                    <option value="San Roque">San Roque</option>
+                                    <option value="San Vicente">San Vicente</option>
+                                    <option value="Villa Aurora">Villa Aurora</option>
+                                    <option value="Villa Parque">Villa Parque</option>
+                                    <option value="Villa Paso">Villa Paso</option>
+                                    <option value="Villa Policial">Villa Policial</option>
+                                    <option value="Ytororó">Ytororó</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Tipo de Usuario (Rol)</label>
+                            <select id="regRole" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-semibold text-emerald-800">
+                                <option value="vecino">Vecino (Ciudadano / Reciclador)</option>
+                                <option value="recolector">Recolector / Chofer (Requiere Aprobación)</option>
+                                <option value="admin">Administrador del Sistema</option>
+                            </select>
+                            <p class="text-[11px] text-amber-700 mt-1 font-medium"><i class="fa-solid fa-shield-halved mr-1"></i>Los recolectores deben ser verificados por un administrador antes de ingresar.</p>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-md transition transform active:scale-95 flex items-center justify-center gap-2 mt-6 text-sm">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>Crear Mi Cuenta</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: VECINO DASHBOARD -->
+        <section id="viewVecino" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-6 rounded-2xl shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase font-semibold text-emerald-200 tracking-wider">Kg Reciclados Totales</p>
+                        <h3 id="vecinoStatKg" class="text-3xl font-extrabold mt-1">0.0 Kg</h3>
+                        <p class="text-xs text-emerald-100 mt-2"><i class="fa-solid fa-recycle mr-1"></i>Aporte al Medio Ambiente</p>
+                    </div>
+                    <div class="bg-emerald-500/30 p-4 rounded-xl text-3xl">
+                        <i class="fa-solid fa-weight-hanging"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-teal-600 to-teal-800 text-white p-6 rounded-2xl shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase font-semibold text-teal-200 tracking-wider">Puntos EcoPilar</p>
+                        <h3 id="vecinoStatPoints" class="text-3xl font-extrabold mt-1">0 pts</h3>
+                        <p class="text-xs text-teal-100 mt-2"><i class="fa-solid fa-award mr-1"></i>Canjeables por beneficios</p>
+                    </div>
+                    <div class="bg-teal-500/30 p-4 rounded-xl text-3xl">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Estado de Entregas</p>
+                        <h3 id="vecinoStatActiveRequests" class="text-2xl font-bold text-slate-800 mt-1">0 Activas</h3>
+                        <p class="text-xs text-slate-500 mt-2"><i class="fa-solid fa-clock-rotate-left mr-1"></i>En seguimiento en vivo</p>
+                    </div>
+                    <div class="bg-slate-100 p-4 rounded-xl text-3xl text-emerald-600">
+                        <i class="fa-solid fa-truck-ramp-box"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- FORM: Request Recycling Pick-up -->
+                <div class="lg:col-span-1 bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-square-plus text-emerald-600"></i>
+                        <span>Solicitar Recolección</span>
+                    </h2>
+
+                    <form onsubmit="handleCreateRequest(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tipo de Material</label>
+                            <select id="reqMaterial" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500">
+                                <option value="Plástico (PET, HDPE)">Plástico (PET, HDPE)</option>
+                                <option value="Cartón y Papel">Cartón y Papel</option>
+                                <option value="Vidrio">Vidrio</option>
+                                <option value="Aceite Usado de Cocina">Aceite Usado de Cocina</option>
+                                <option value="RAEE (Electrónicos)">RAEE (Electrónicos)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block text-xs font-semibold text-slate-600 uppercase">Ubicación / Dirección Exacta</label>
+                                <button type="button" onclick="useCurrentLocation()" class="text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-location-crosshairs"></i> Detectar Ubicación
+                                </button>
+                            </div>
+                            <input type="text" id="reqAddress" required placeholder="Ej: Calle Alberdi c/ Tacuary, Casa 14" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 mb-2">
+                            
+                            <!-- Mapa selector para el Ciudadano -->
+                            <p class="text-[11px] text-slate-500 mb-1"><i class="fa-solid fa-hand-pointer text-emerald-600 mr-1"></i>Haz clic en el mapa para marcar el punto exacto:</p>
+                            <div id="citizenMap" class="w-full h-44 rounded-lg border border-slate-300 shadow-inner"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Observaciones / Referencias</label>
+                            <textarea id="reqNotes" rows="2" placeholder="Ej: Dejaré los cartones atados en la vereda frente al portón blanco" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>Enviar Solicitud</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- LIST: History of Requests -->
+                <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center justify-between">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-emerald-600"></i>
+                            Mis Solicitudes de Reciclaje
+                        </span>
+                        <span class="text-xs font-normal text-slate-500">Actualizado en tiempo real</span>
+                    </h2>
+
+                    <div id="vecinoRequestsList" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: RECOLECTOR DASHBOARD -->
+        <section id="viewRecolector" class="hidden space-y-6">
+            <div class="bg-slate-800 text-white rounded-2xl p-6 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-2xl bg-teal-500 text-slate-900 flex items-center justify-center text-2xl font-bold">
+                        <i class="fa-solid fa-truck"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Ruta de Recolección Asignada - Pilar</h2>
+                        <p class="text-sm text-slate-300">Gestiona los retiros asignados a tu unidad en tiempo real.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="bg-slate-700/60 px-4 py-2 rounded-xl text-center">
+                        <span id="recolectorPendingCount" class="block text-2xl font-black text-amber-400">0</span>
+                        <span class="text-[10px] uppercase text-slate-300 font-medium">Asignados</span>
+                    </div>
+                    <div class="bg-slate-700/60 px-4 py-2 rounded-xl text-center">
+                        <span id="recolectorCompletedCount" class="block text-2xl font-black text-emerald-400">0</span>
+                        <span class="text-[10px] uppercase text-slate-300 font-medium">Completados</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot text-teal-600"></i>
+                    <span>Solicitudes Asignadas para Recolectar</span>
+                </h3>
+
+                <div id="recolectorTasksList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic tasks -->
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: ADMIN DASHBOARD -->
+        <section id="viewAdmin" class="hidden space-y-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Total Solicitudes</span>
+                    <h3 id="adminStatTotalReq" class="text-2xl font-extrabold text-slate-800 mt-1">0</h3>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Kg Totales Recuperados</span>
+                    <h3 id="adminStatTotalKg" class="text-2xl font-extrabold text-emerald-600 mt-1">0.0 Kg</h3>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Pendientes Asignación</span>
+                    <h3 id="adminStatPendingReq" class="text-2xl font-extrabold text-amber-500 mt-1">0</h3>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">Usuarios Registrados</span>
+                    <h3 id="adminStatUsers" class="text-2xl font-extrabold text-purple-600 mt-1">0</h3>
+                </div>
+            </div>
+
+            <!-- MAPA DE MONITOREO EN VIVO (GOOGLE MAPS) -->
+            <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot text-emerald-600"></i>
+                    <span>Mapa Geográfico de Puntos de Recolección (Pilar, Paraguay)</span>
+                </h3>
+                <div id="map" class="w-full h-80 rounded-xl border border-slate-300 shadow-inner"></div>
+            </div>
+
+            <!-- Tabbed Management Section -->
+            <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+                <div class="flex border-b border-slate-200 bg-slate-50">
+                    <button id="adminTabReqs" onclick="toggleAdminTab('requests')" class="px-6 py-3.5 font-bold text-emerald-700 border-b-2 border-emerald-600 bg-white transition text-sm">
+                        <i class="fa-solid fa-list-check mr-2"></i>Gestión de Solicitudes
+                    </button>
+                    <button id="adminTabUsers" onclick="toggleAdminTab('users')" class="px-6 py-3.5 font-bold text-slate-500 hover:text-emerald-600 transition text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-users"></i>Usuarios & Roles
+                        <span id="pendingApprovalBadge" class="hidden bg-amber-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">0</span>
+                    </button>
+                </div>
+
+                <div id="adminPanelRequests" class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs font-bold text-slate-400 uppercase bg-slate-50 border-b border-slate-200">
+                                    <th class="p-3">ID / Fecha</th>
+                                    <th class="p-3">Vecino</th>
+                                    <th class="p-3">Material / Barrio</th>
+                                    <th class="p-3">Estado</th>
+                                    <th class="p-3">Recolector Asignado</th>
+                                    <th class="p-3 text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableRequests" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="adminPanelUsers" class="p-6 hidden space-y-6">
+                    <!-- SECCIÓN DE RECOLECTORES PENDIENTES DE APROBACIÓN -->
+                    <div id="pendingCollectorsContainer" class="bg-amber-50 border border-amber-200 p-4 rounded-xl">
+                        <h4 class="font-bold text-amber-800 text-sm mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-cat text-amber-600"></i>
+                            <span>Recolectores Pendientes de Aprobación</span>
+                        </h4>
+                        <div id="pendingCollectorsList" class="space-y-2">
+                            <!-- Recolectores pendientes dinámicos -->
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <h4 class="font-bold text-slate-800 text-sm mb-3">Todos los Usuarios Registrados</h4>
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs font-bold text-slate-400 uppercase bg-slate-50 border-b border-slate-200">
+                                    <th class="p-3">Usuario</th>
+                                    <th class="p-3">Correo</th>
+                                    <th class="p-3">Barrio</th>
+                                    <th class="p-3">Rol / Estado</th>
+                                    <th class="p-3 text-right">Cambiar Rol</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableUsers" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 5: EDUCACIÓN Y CONCIENTIZACIÓN -->
+        <section id="viewEdu" class="hidden space-y-6">
+            <div class="bg-gradient-to-r from-emerald-800 to-teal-800 text-white rounded-2xl p-8 shadow-lg">
+                <span class="bg-emerald-500/30 text-emerald-200 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-400/20">Guía Ciudadana</span>
+                <h1 class="text-3xl font-extrabold mt-3">Concientización Ambiental EcoPilar</h1>
+                <p class="text-emerald-100 max-w-2xl mt-2">Aprende a clasificar tus residuos correctamente para optimizar la cadena de reciclaje en la ciudad de Pilar.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold mb-4">
+                            <i class="fa-solid fa-bottle-water"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-lg mb-2">Plásticos (PET & HDPE)</h3>
+                        <p class="text-sm text-slate-600">Lava y aplasta las botellas plásticas. Retira las tapas y etiquetas para agilizar la separación en planta.</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100 text-xs font-semibold text-emerald-600">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Aceptado en EcoPilar
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl font-bold mb-4">
+                            <i class="fa-solid fa-box-open"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-lg mb-2">Cartón y Papel</h3>
+                        <p class="text-sm text-slate-600">Mantén el papel y cartón secos. Desarma las cajas para ahorrar espacio en la recolección.</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100 text-xs font-semibold text-emerald-600">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Aceptado en EcoPilar
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl font-bold mb-4">
+                            <i class="fa-solid fa-wine-bottle"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-lg mb-2">Vidrio y Aceite Usado</h3>
+                        <p class="text-sm text-slate-600">Guarda el aceite usado en botellas de plástico cerradas. Entrega recipientes de vidrio enteros y limpios.</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100 text-xs font-semibold text-emerald-600">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Aceptado en EcoPilar
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-emerald-50 rounded-2xl p-6 border border-emerald-200 text-center">
+                <button onclick="goToHome()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-lg shadow transition inline-flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Volver a Inicio</span>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- SCRIPT DE LÓGICA DE LA APLICACIÓN -->
+    <script>
+        // Estado Global Simulado
+        let currentUser = null;
+        let users = [
+            { id: 1, name: 'Carlos Vecino', email: 'vecino@ecopilar.py', pass: '123456', role: 'vecino', neighborhood: 'Obrero', status: 'approved' },
+            { id: 2, name: 'Pedro Recolector', email: 'recolector@ecopilar.py', pass: '123456', role: 'recolector', neighborhood: 'Centro', status: 'approved' },
+            { id: 3, name: 'Admin Principal', email: 'admin@ecopilar.py', pass: '123456', role: 'admin', neighborhood: 'Centro', status: 'approved' }
+        ];
+
+        let requests = [
+            { id: 101, userId: 1, userName: 'Carlos Vecino', neighborhood: 'Obrero', material: 'Plástico (PET, HDPE)', address: 'Calle Alberdi c/ Tacuary', notes: 'Portón verde', status: 'Pendiente', collector: null, lat: -26.8661, lng: -57.5754 },
+            { id: 102, userId: 1, userName: 'Carlos Vecino', neighborhood: 'Obrero', material: 'Cartón y Papel', address: 'Av. General Díaz 450', notes: 'Atado con piola', status: 'Asignado', collector: 'Pedro Recolector', lat: -26.8700, lng: -57.5800 }
+        ];
+
+        let map, citizenMap, mainMarker, citizenMarker;
+        let selectedLat = -26.8661;
+        let selectedLng = -57.5754;
+
+        // Inicializar Mapas de Google Maps
+        window.initMap = function() {
+            const pilarCenter = { lat: -26.8661, lng: -57.5754 };
+            
+            // Mapa Admin / Monitoreo
+            const mapEl = document.getElementById('map');
+            if(mapEl) {
+                map = new google.maps.Map(mapEl, {
+                    center: pilarCenter,
+                    zoom: 14,
+                });
+                updateAdminMapMarkers();
+            }
+
+            // Mapa Selector Ciudadano
+            const citizenMapEl = document.getElementById('citizenMap');
+            if(citizenMapEl) {
+                citizenMap = new google.maps.Map(citizenMapEl, {
+                    center: pilarCenter,
+                    zoom: 14,
+                });
+                citizenMarker = new google.maps.Marker({
+                    position: pilarCenter,
+                    map: citizenMap,
+                    draggable: true
+                });
+
+                google.maps.event.addListener(citizenMap, 'click', function(event) {
+                    selectedLat = event.latLng.lat();
+                    selectedLng = event.latLng.lng();
+                    citizenMarker.setPosition(event.latLng);
+                });
+            }
+        };
+
+        function updateAdminMapMarkers() {
+            if(!map) return;
+        }
+
+        // Cambio de Vistas
+        function goToAuth() {
+            ['viewHome', 'viewAuth', 'viewVecino', 'viewRecolector', 'viewAdmin', 'viewEdu'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.add('hidden');
+            });
+            document.getElementById('viewAuth').classList.remove('hidden');
+        }
+
+        function switchView(viewName) {
+            ['viewHome', 'viewAuth', 'viewVecino', 'viewRecolector', 'viewAdmin', 'viewEdu'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.add('hidden');
+            });
+
+            if(viewName === 'home') document.getElementById('viewHome').classList.remove('hidden');
+            if(viewName === 'auth') document.getElementById('viewAuth').classList.remove('hidden');
+            if(viewName === 'edu') document.getElementById('viewEdu').classList.remove('hidden');
+
+            if(viewName === 'vecino') {
+                document.getElementById('viewVecino').classList.remove('hidden');
+                renderVecinoDashboard();
+            }
+            if(viewName === 'recolector') {
+                document.getElementById('viewRecolector').classList.remove('hidden');
+                renderRecolectorDashboard();
+            }
+            if(viewName === 'admin') {
+                document.getElementById('viewAdmin').classList.remove('hidden');
+                renderAdminDashboard();
+                setTimeout(() => { if(map) google.maps.event.trigger(map, 'resize'); }, 300);
+            }
+        }
+
+        function goToHome() {
+            if(!currentUser) {
+                switchView('home');
+            } else {
+                if(currentUser.role === 'vecino') switchView('vecino');
+                else if(currentUser.role === 'recolector') switchView('recolector');
+                else if(currentUser.role === 'admin') switchView('admin');
+            }
+        }
+
+        // Funcionalidad de Foto Editable de la Ciudad
+        function previewCityPhoto(event) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('cityBannerImg').src = e.target.result;
+                    showToast('¡Foto de la ciudad actualizada con éxito!', 'success');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Manejo de Pestañas Auth
+        function toggleAuthTab(tab) {
+            const loginBtn = document.getElementById('tabLoginBtn');
+            const regBtn = document.getElementById('tabRegisterBtn');
+            const loginForm = document.getElementById('loginForm');
+            const regForm = document.getElementById('registerForm');
+
+            if(tab === 'login') {
+                loginBtn.className = "flex-1 py-4 text-center font-bold text-emerald-700 border-b-2 border-emerald-600 bg-white transition text-sm";
+                regBtn.className = "flex-1 py-4 text-center font-bold text-slate-500 hover:text-emerald-600 transition text-sm";
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+            } else {
+                regBtn.className = "flex-1 py-4 text-center font-bold text-emerald-700 border-b-2 border-emerald-600 bg-white transition text-sm";
+                loginBtn.className = "flex-1 py-4 text-center font-bold text-slate-500 hover:text-emerald-600 transition text-sm";
+                regForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        }
+
+        // Acceso Rápido
+        function fillQuickLogin(email, pass) {
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPass').value = pass;
+            document.getElementById('loginForm').requestSubmit();
+        }
+
+        // Login Handler con Verificación de Estado
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPass').value;
+
+            const found = users.find(u => u.email === email && u.pass === pass);
+            if(found) {
+                if(found.role === 'recolector' && found.status === 'pending') {
+                    showToast('Su cuenta de Recolector aún está pendiente de aprobación por el Administrador.', 'error');
+                    return;
+                }
+                currentUser = found;
+                updateNavUserArea();
+                showToast(`¡Bienvenido de nuevo, ${currentUser.name}!`, 'success');
+                goToHome();
+            } else {
+                showToast('Correo o contraseña incorrectos.', 'error');
+            }
+        }
+
+        // Register Handler con Aprobación
+        function handleRegister(event) {
+            event.preventDefault();
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const pass = document.getElementById('regPass').value;
+            const neighborhood = document.getElementById('regNeighborhood').value;
+            const role = document.getElementById('regRole').value;
+
+            if(users.some(u => u.email === email)) {
+                showToast('El correo ya está registrado.', 'error');
+                return;
+            }
+
+            const status = (role === 'recolector') ? 'pending' : 'approved';
+
+            const newUser = { id: users.length + 1, name, email, pass, role, neighborhood, status };
+            users.push(newUser);
+
+            if(status === 'pending') {
+                showToast('Cuenta de Recolector registrada. Espere la aprobación del Administrador.', 'info');
+                toggleAuthTab('login');
+            } else {
+                currentUser = newUser;
+                updateNavUserArea();
+                showToast('¡Cuenta creada con éxito!', 'success');
+                goToHome();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('navUserArea').classList.add('hidden');
+            switchView('home');
+            showToast('Sesión cerrada correctamente.', 'info');
+        }
+
+        function updateNavUserArea() {
+            if(!currentUser) return;
+            document.getElementById('navUserArea').classList.remove('hidden');
+            document.getElementById('navUserName').innerText = currentUser.name;
+            document.getElementById('navUserBadge').innerText = currentUser.role;
+        }
+
+        // Dashboard Vecino
+        function renderVecinoDashboard() {
+            const myReqs = requests.filter(r => r.userId === currentUser.id);
+            document.getElementById('vecinoStatKg').innerText = `${(myReqs.length * 3.5).toFixed(1)} Kg`;
+            document.getElementById('vecinoStatPoints').innerText = `${myReqs.length * 50} pts`;
+            document.getElementById('vecinoStatActiveRequests').innerText = `${myReqs.filter(r => r.status !== 'Completado').length} Activas`;
+
+            const listEl = document.getElementById('vecinoRequestsList');
+            if(myReqs.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No tienes solicitudes registradas aún.</p>`;
+                return;
+            }
+
+            listEl.innerHTML = myReqs.map(r => `
+                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">${r.material}</span>
+                        <h4 class="font-bold text-slate-800 text-sm mt-1">${r.address}</h4>
+                        <p class="text-xs text-slate-500">Notas: ${r.notes || 'Ninguna'} | Recolector: ${r.collector || 'Sin asignar'}</p>
+                    </div>
+                    <span class="text-xs font-bold px-3 py-1 rounded-full ${r.status === 'Pendiente' ? 'bg-amber-100 text-amber-800' : r.status === 'Asignado' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}">
+                        ${r.status}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function handleCreateRequest(event) {
+            event.preventDefault();
+            const material = document.getElementById('reqMaterial').value;
+            const address = document.getElementById('reqAddress').value;
+            const notes = document.getElementById('reqNotes').value;
+
+            const newReq = {
+                id: Date.now(),
+                userId: currentUser.id,
+                userName: currentUser.name,
+                neighborhood: currentUser.neighborhood || 'Centro',
+                material,
+                address,
+                notes,
+                status: 'Pendiente',
+                collector: null,
+                lat: selectedLat,
+                lng: selectedLng
+            };
+
+            requests.push(newReq);
+            showToast('¡Solicitud de recolección creada!', 'success');
+            event.target.reset();
+            renderVecinoDashboard();
+        }
+
+        function useCurrentLocation() {
+            if(navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    selectedLat = position.coords.latitude;
+                    selectedLng = position.coords.longitude;
+                    const pos = { lat: selectedLat, lng: selectedLng };
+                    if(citizenMap) {
+                        citizenMap.setCenter(pos);
+                        citizenMarker.setPosition(pos);
+                    }
+                    document.getElementById('reqAddress').value = `Ubicación GPS (${selectedLat.toFixed(4)}, ${selectedLng.toFixed(4)})`;
+                    showToast('Ubicación detectada con éxito.', 'success');
+                }, () => {
+                    showToast('No se pudo obtener la ubicación GPS.', 'error');
+                });
+            } else {
+                showToast('Geolocalización no soportada por tu navegador.', 'error');
+            }
+        }
+
+        // Dashboard Recolector con Botón GPS
+        function renderRecolectorDashboard() {
+            const pendingTasks = requests.filter(r => r.status !== 'Completado');
+            document.getElementById('recolectorPendingCount').innerText = pendingTasks.length;
+            document.getElementById('recolectorCompletedCount').innerText = requests.filter(r => r.status === 'Completado').length;
+
+            const listEl = document.getElementById('recolectorTasksList');
+            if(pendingTasks.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 col-span-2 text-center py-4">No hay tareas pendientes asignadas.</p>`;
+                return;
+            }
+
+            listEl.innerHTML = pendingTasks.map(t => {
+                const mapUrl = (t.lat && t.lng) 
+                    ? `https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.address + ', Pilar, Paraguay')}`;
+
+                return `
+                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col justify-between shadow-sm">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-xs font-bold bg-teal-100 text-teal-800 px-2 py-0.5 rounded flex items-center gap-1">
+                                    <i class="fa-solid fa-box"></i> ${t.material}
+                                </span>
+                                <span class="text-xs text-slate-500 font-semibold bg-slate-200 px-2 py-0.5 rounded">
+                                    <i class="fa-solid fa-location-dot text-red-500 mr-1"></i>${t.neighborhood}
+                                </span>
+                            </div>
+                            
+                            <h4 class="font-bold text-slate-800 text-sm mt-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-map-pin text-emerald-600"></i> ${t.address}
+                            </h4>
+                            
+                            <div class="mt-2 text-xs text-slate-600 space-y-1 bg-white p-2.5 rounded-lg border border-slate-200">
+                                <p><strong><i class="fa-solid fa-user text-slate-400 mr-1"></i>Vecino:</strong> ${t.userName}</p>
+                                <p><strong><i class="fa-solid fa-note-sticky text-slate-400 mr-1"></i>Referencia:</strong> ${t.notes || 'Sin referencia extra'}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                            <a href="${mapUrl}" target="_blank" class="text-xs bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-2 rounded-lg shadow transition flex items-center gap-1">
+                                <i class="fa-solid fa-diamond-turn-right"></i> Ir con GPS
+                            </a>
+
+                            <button onclick="completeTask(${t.id})" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg shadow transition flex items-center gap-1">
+                                <i class="fa-solid fa-check"></i> Marcar Completado
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function completeTask(id) {
+            const req = requests.find(r => r.id === id);
+            if(req) {
+                req.status = 'Completado';
+                showToast('¡Recolección completada con éxito!', 'success');
+                renderRecolectorDashboard();
+            }
+        }
+
+        // Dashboard Admin con Aprobación de Recolectores
+        function renderAdminDashboard() {
+            document.getElementById('adminStatTotalReq').innerText = requests.length;
+            document.getElementById('adminStatTotalKg').innerText = `${(requests.filter(r => r.status === 'Completado').length * 4.2).toFixed(1)} Kg`;
+            document.getElementById('adminStatPendingReq').innerText = requests.filter(r => r.status === 'Pendiente').length;
+            document.getElementById('adminStatUsers').innerText = users.length;
+
+            // Renderizar Recolectores Pendientes
+            const pendingCollectors = users.filter(u => u.role === 'recolector' && u.status === 'pending');
+            const pendingBadge = document.getElementById('pendingApprovalBadge');
+            
+            if(pendingCollectors.length > 0) {
+                pendingBadge.innerText = pendingCollectors.length;
+                pendingBadge.classList.remove('hidden');
+                document.getElementById('pendingCollectorsContainer').classList.remove('hidden');
+                
+                document.getElementById('pendingCollectorsList').innerHTML = pendingCollectors.map(c => `
+                    <div class="bg-white p-3 rounded-lg border border-amber-200 flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-slate-800 text-sm">${c.name}</span>
+                            <span class="text-xs text-slate-500 block">${c.email} - Barrio: ${c.neighborhood}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="approveCollector(${c.id}, true)" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded transition flex items-center gap-1">
+                                <i class="fa-solid fa-check"></i> Aprobar
+                            </button>
+                            <button onclick="approveCollector(${c.id}, false)" class="text-xs bg-red-500 hover:bg-red-600 text-white font-bold px-3 py-1.5 rounded transition flex items-center gap-1">
+                                <i class="fa-solid fa-xmark"></i> Rechazar
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                pendingBadge.classList.add('hidden');
+                document.getElementById('pendingCollectorsContainer').classList.add('hidden');
+            }
+
+            // Tabla Solicitudes
+            const reqTable = document.getElementById('adminTableRequests');
+            reqTable.innerHTML = requests.map(r => `
+                <tr class="border-b border-slate-100">
+                    <td class="p-3 font-medium text-slate-700">#${r.id}</td>
+                    <td class="p-3 text-slate-600">${r.userName}</td>
+                    <td class="p-3"><span class="font-semibold text-slate-800">${r.material}</span><br><span class="text-xs text-slate-400">${r.neighborhood}</span></td>
+                    <td class="p-3"><span class="text-xs font-bold px-2 py-0.5 rounded-full ${r.status === 'Pendiente' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${r.status}</span></td>
+                    <td class="p-3 text-slate-600">${r.collector || 'Sin asignar'}</td>
+                    <td class="p-3 text-right">
+                        ${r.status === 'Pendiente' ? `<button onclick="assignCollector(${r.id})" class="text-xs bg-emerald-600 text-white px-3 py-1 rounded shadow">Asignar Chofer</button>` : '<span class="text-xs text-slate-400">Gestionado</span>'}
+                    </td>
+                </tr>
+            `).join('');
+
+            // Tabla Todos los Usuarios
+            const userTable = document.getElementById('adminTableUsers');
+            userTable.innerHTML = users.map(u => `
+                <tr class="border-b border-slate-100">
+                    <td class="p-3 font-bold text-slate-700">${u.name}</td>
+                    <td class="p-3 text-slate-600">${u.email}</td>
+                    <td class="p-3 text-slate-600">${u.neighborhood}</td>
+                    <td class="p-3">
+                        <span class="text-xs font-bold uppercase px-2 py-0.5 rounded ${u.role==='recolector' && u.status==='pending' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800'}">
+                            ${u.role} ${u.status === 'pending' ? '(Pendiente)' : ''}
+                        </span>
+                    </td>
+                    <td class="p-3 text-right">
+                        <select onchange="changeUserRole(${u.id}, this.value)" class="text-xs p-1 border rounded bg-slate-50">
+                            <option value="vecino" ${u.role==='vecino'?'selected':''}>Vecino</option>
+                            <option value="recolector" ${u.role==='recolector'?'selected':''}>Recolector</option>
+                            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+                        </select>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function approveCollector(userId, approved) {
+            const index = users.findIndex(u => u.id === userId);
+            if(index !== -1) {
+                if(approved) {
+                    users[index].status = 'approved';
+                    showToast(`Recolector ${users[index].name} aprobado con éxito.`, 'success');
+                } else {
+                    users.splice(index, 1);
+                    showToast(`Solicitud de recolector rechazada.`, 'info');
+                }
+                renderAdminDashboard();
+            }
+        }
+
+        function assignCollector(id) {
+            const req = requests.find(r => r.id === id);
+            if(req) {
+                req.status = 'Asignado';
+                req.collector = 'Pedro Recolector';
+                showToast('Solicitud asignada a recolector.', 'success');
+                renderAdminDashboard();
+            }
+        }
+
+        function changeUserRole(userId, newRole) {
+            const u = users.find(user => user.id === userId);
+            if(u) {
+                u.role = newRole;
+                if(newRole !== 'recolector') u.status = 'approved';
+                showToast(`Rol de ${u.name} actualizado a ${newRole}.`, 'success');
+                renderAdminDashboard();
+            }
+        }
+
+        function toggleAdminTab(tab) {
+            const reqsBtn = document.getElementById('adminTabReqs');
+            const usersBtn = document.getElementById('adminTabUsers');
+            const reqsPanel = document.getElementById('adminPanelRequests');
+            const usersPanel = document.getElementById('adminPanelUsers');
+
+            if(tab === 'requests') {
+                reqsBtn.className = "px-6 py-3.5 font-bold text-emerald-700 border-b-2 border-emerald-600 bg-white transition text-sm";
+                usersBtn.className = "px-6 py-3.5 font-bold text-slate-500 hover:text-emerald-600 transition text-sm flex items-center gap-2";
+                reqsPanel.classList.remove('hidden');
+                usersPanel.classList.add('hidden');
+            } else {
+                usersBtn.className = "px-6 py-3.5 font-bold text-emerald-700 border-b-2 border-emerald-600 bg-white transition text-sm flex items-center gap-2";
+                reqsBtn.className = "px-6 py-3.5 font-bold text-slate-500 hover:text-emerald-600 transition text-sm";
+                usersPanel.classList.remove('hidden');
+                reqsPanel.classList.add('hidden');
+            }
+        }
+
+        // Sistema de Notificaciones Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-800 text-white' : type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white';
+            const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info';
+
+            toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm transition transform translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Iniciar en la vista de bienvenida (Home)
+        window.onload = function() {
+            switchView('home');
+        };
+    </script>
+</body>
+</html>
